@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { supabase } from '@/integrations/supabase/client';
 
-const API_URL = 'http://localhost:3001'; // Default to local development server
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const api = axios.create({
   baseURL: API_URL,
