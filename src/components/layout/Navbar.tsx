@@ -1,6 +1,6 @@
 
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { 
@@ -9,17 +9,37 @@ import {
   X, 
   PlusCircle,
   Lightbulb,
-  Sparkles
+  Sparkles,
+  User,
+  LogOut,
+  Settings,
+  FileText
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   
-  // Mock authentication state (replace with actual auth later)
-  const isAuthenticated = false;
+  // Use AuthContext to get user and profile info
+  const { user, profile, loading, signOut } = useAuth();
   
   const toggleMenu = () => setIsOpen(!isOpen);
+  
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   const navLinks = [
     { name: 'Browse', path: '/browse', icon: <Lightbulb className="h-4 w-4" /> },
@@ -38,7 +58,7 @@ const Navbar = () => {
             
             <div className="hidden sm:ml-6 sm:flex sm:space-x-4">
               {navLinks.map((link) => 
-                (!link.auth || isAuthenticated) && (
+                (!link.auth || user) && (
                   <Link
                     key={link.name}
                     to={link.path}
@@ -69,7 +89,7 @@ const Navbar = () => {
             
             <ThemeToggle />
             
-            {isAuthenticated ? (
+            {!loading && (user ? (
               <div className="flex items-center ml-4">
                 <Link to="/create">
                   <Button variant="default" className="flex items-center">
@@ -77,9 +97,51 @@ const Navbar = () => {
                     New Idea
                   </Button>
                 </Link>
-                <Button variant="ghost" className="ml-2">
-                  Profile
-                </Button>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="ml-2 p-0 h-10 w-10 rounded-full">
+                      <Avatar>
+                        <AvatarImage src={profile?.avatar_url || ''} alt={profile?.username || ''} />
+                        <AvatarFallback>
+                          {profile?.full_name ? profile.full_name[0] : profile?.username ? profile.username[0] : 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>
+                      <div className="flex flex-col space-y-1">
+                        <p className="font-medium text-base">{profile?.full_name}</p>
+                        <p className="text-xs text-muted-foreground">@{profile?.username}</p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <Link to="/dashboard">
+                      <DropdownMenuItem>
+                        <FileText className="mr-2 h-4 w-4" />
+                        <span>My Projects</span>
+                      </DropdownMenuItem>
+                    </Link>
+                    <Link to={`/profile/${user.id}`}>
+                      <DropdownMenuItem>
+                        <User className="mr-2 h-4 w-4" />
+                        <span>My Profile</span>
+                      </DropdownMenuItem>
+                    </Link>
+                    <Link to="/settings">
+                      <DropdownMenuItem>
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Settings</span>
+                      </DropdownMenuItem>
+                    </Link>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ) : (
               <div className="flex items-center ml-4">
@@ -90,7 +152,7 @@ const Navbar = () => {
                   <Button variant="default" className="ml-2">Sign Up</Button>
                 </Link>
               </div>
-            )}
+            ))}
           </div>
           
           <div className="flex items-center sm:hidden">
@@ -114,7 +176,7 @@ const Navbar = () => {
         <div className="sm:hidden">
           <div className="px-2 pt-2 pb-3 space-y-1">
             {navLinks.map((link) => 
-              (!link.auth || isAuthenticated) && (
+              (!link.auth || user) && (
                 <Link
                   key={link.name}
                   to={link.path}
@@ -140,7 +202,7 @@ const Navbar = () => {
               />
             </div>
             
-            {isAuthenticated ? (
+            {!loading && (user ? (
               <div className="space-y-2">
                 <Link 
                   to="/create" 
@@ -151,12 +213,28 @@ const Navbar = () => {
                   New Idea
                 </Link>
                 <Link 
-                  to="/profile" 
+                  to="/dashboard" 
                   onClick={toggleMenu}
-                  className="block px-3 py-2 text-base font-medium text-foreground hover:text-primary rounded-md"
+                  className="flex items-center px-3 py-2 text-base font-medium text-foreground hover:text-primary rounded-md"
                 >
-                  Profile
+                  <FileText className="mr-2 h-5 w-5" />
+                  My Projects
                 </Link>
+                <Link 
+                  to={`/profile/${user.id}`} 
+                  onClick={toggleMenu}
+                  className="flex items-center px-3 py-2 text-base font-medium text-foreground hover:text-primary rounded-md"
+                >
+                  <User className="mr-2 h-5 w-5" />
+                  My Profile
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center w-full px-3 py-2 text-base font-medium text-foreground hover:text-primary rounded-md"
+                >
+                  <LogOut className="mr-2 h-5 w-5" />
+                  Log out
+                </button>
               </div>
             ) : (
               <div className="space-y-2 pt-2">
@@ -175,7 +253,7 @@ const Navbar = () => {
                   Sign Up
                 </Link>
               </div>
-            )}
+            ))}
           </div>
         </div>
       )}

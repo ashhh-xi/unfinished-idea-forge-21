@@ -23,25 +23,24 @@ import { Sparkles, Github, Mail } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState('');
-  const { toast } = useToast();
+  const [role, setRole] = useState('maker');
+  const { toast: uiToast } = useToast();
   const navigate = useNavigate();
   const { signUp, loading } = useAuth();
+  const [socialLoading, setSocialLoading] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (password.length < 8) {
-      toast({
-        title: "Password too short",
-        description: "Password must be at least 8 characters long",
-        variant: "destructive"
-      });
+      toast.error("Password must be at least 8 characters long");
       return;
     }
     
@@ -61,28 +60,33 @@ const Register = () => {
           role: role || 'maker',
         });
         
-        toast({
-          title: "Registration Successful",
-          description: "We've sent a confirmation email. Please verify your email to continue.",
-        });
-        
+        toast.success("We've sent a confirmation email. Please verify your email to continue.");
         navigate('/login');
       } catch (profileError) {
         console.error("Error creating profile:", profileError);
-        toast({
-          title: "Profile Creation Failed",
-          description: "Your account was created but we couldn't set up your profile. Please try logging in.",
-          variant: "destructive"
-        });
+        toast.error("Your account was created but we couldn't set up your profile. Please try logging in.");
       }
     }
   };
   
-  const handleOAuthSignUp = (provider: string) => {
-    toast({
-      title: `${provider} Sign Up`,
-      description: "This feature will be available soon.",
-    });
+  const handleOAuthSignUp = async (provider: 'github' | 'google') => {
+    try {
+      setSocialLoading(provider);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+      
+      if (error) {
+        throw error;
+      }
+    } catch (error: any) {
+      toast.error(error.message || `Failed to sign up with ${provider}`);
+    } finally {
+      setSocialLoading(null);
+    }
   };
 
   return (
@@ -181,18 +185,20 @@ const Register = () => {
                 <Button 
                   variant="outline" 
                   className="w-full" 
-                  onClick={() => handleOAuthSignUp('GitHub')}
+                  onClick={() => handleOAuthSignUp('github')}
+                  disabled={socialLoading !== null}
                 >
                   <Github className="mr-2 h-4 w-4" />
-                  GitHub
+                  {socialLoading === 'github' ? 'Loading...' : 'GitHub'}
                 </Button>
                 <Button 
                   variant="outline" 
                   className="w-full"
-                  onClick={() => handleOAuthSignUp('Google')} 
+                  onClick={() => handleOAuthSignUp('google')} 
+                  disabled={socialLoading !== null}
                 >
                   <Mail className="mr-2 h-4 w-4" />
-                  Google
+                  {socialLoading === 'google' ? 'Loading...' : 'Google'}
                 </Button>
               </div>
             </div>
