@@ -14,27 +14,23 @@ import {
 } from '@/components/ui/card';
 import { Sparkles, Github, Mail } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { signIn, loading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     
-    // Simulate login API call
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Login Successful",
-        description: "Welcome back to IdeaForge!",
-      });
+    const { error } = await signIn(email, password);
+    
+    if (!error) {
       navigate('/browse');
-    }, 1500);
+    }
   };
   
   const handleOAuthLogin = (provider: string) => {
@@ -98,9 +94,9 @@ const Login = () => {
                 <Button 
                   type="submit" 
                   className="w-full" 
-                  disabled={isLoading}
+                  disabled={loading}
                 >
-                  {isLoading ? "Signing in..." : "Sign in"}
+                  {loading ? "Signing in..." : "Sign in"}
                 </Button>
               </div>
             </form>

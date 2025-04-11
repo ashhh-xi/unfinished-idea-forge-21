@@ -19,31 +19,63 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Sparkles, Github, Mail, UserPlus } from 'lucide-react';
+import { Sparkles, Github, Mail } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import api from '@/lib/api';
 
 const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { signUp, loading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     
-    // Simulate registration API call
-    setTimeout(() => {
-      setIsLoading(false);
+    if (password.length < 8) {
       toast({
-        title: "Registration Successful",
-        description: "Welcome to IdeaForge! Your account has been created.",
+        title: "Password too short",
+        description: "Password must be at least 8 characters long",
+        variant: "destructive"
       });
-      navigate('/browse');
-    }, 1500);
+      return;
+    }
+    
+    const { data, error } = await signUp(email, password);
+    
+    if (error) {
+      return;
+    }
+    
+    // Create profile once signed up
+    if (data?.user) {
+      try {
+        await api.post('/auth/create-profile', {
+          userId: data.user.id,
+          username: email.split('@')[0],
+          fullName: name,
+          role: role || 'maker',
+        });
+        
+        toast({
+          title: "Registration Successful",
+          description: "We've sent a confirmation email. Please verify your email to continue.",
+        });
+        
+        navigate('/login');
+      } catch (profileError) {
+        console.error("Error creating profile:", profileError);
+        toast({
+          title: "Profile Creation Failed",
+          description: "Your account was created but we couldn't set up your profile. Please try logging in.",
+          variant: "destructive"
+        });
+      }
+    }
   };
   
   const handleOAuthSignUp = (provider: string) => {
@@ -116,10 +148,9 @@ const Register = () => {
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="creator">Creator with ideas</SelectItem>
-                      <SelectItem value="builder">Builder/Developer</SelectItem>
-                      <SelectItem value="investor">Investor/Advisor</SelectItem>
-                      <SelectItem value="other">Just exploring</SelectItem>
+                      <SelectItem value="maker">Creator with ideas</SelectItem>
+                      <SelectItem value="collaborator">Builder/Developer</SelectItem>
+                      <SelectItem value="buyer">Investor/Advisor</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -127,9 +158,9 @@ const Register = () => {
                 <Button 
                   type="submit" 
                   className="w-full" 
-                  disabled={isLoading}
+                  disabled={loading}
                 >
-                  {isLoading ? "Creating account..." : "Create account"}
+                  {loading ? "Creating account..." : "Create account"}
                 </Button>
               </div>
             </form>
