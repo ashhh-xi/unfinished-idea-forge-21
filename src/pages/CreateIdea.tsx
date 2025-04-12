@@ -21,6 +21,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { 
   Lightbulb, 
   Plus, 
@@ -33,9 +42,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
 const categories = [
   "Web App", 
@@ -49,30 +55,24 @@ const categories = [
   "Other"
 ];
 
-const statuses = ["idea", "half-built", "ready"];
-const stageLabels = {
-  "idea": "Just an idea",
-  "half-built": "Partially built",
-  "ready": "Ready to launch"
-};
+const statuses = ["Concept", "Prototype", "MVP", "On Hold"];
 
 const CreateIdea = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
-  const [stage, setStage] = useState('idea');
+  const [status, setStatus] = useState('Concept');
   const [tags, setTags] = useState<string[]>([]);
   const [currentTag, setCurrentTag] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [isPrivate, setIsPrivate] = useState(false);
   const [isNdaRequired, setIsNdaRequired] = useState(false);
-  const [price, setPrice] = useState<string>('0');
-  const [licensing, setLicensing] = useState('Open Source');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast: uiToast } = useToast();
+  const { toast } = useToast();
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
 
+  // In a real app, this would be a proper form validation with react-hook-form
+  
   const handleAddTag = () => {
     if (currentTag && !tags.includes(currentTag) && tags.length < 10) {
       setTags([...tags, currentTag]);
@@ -97,86 +97,47 @@ const CreateIdea = () => {
   
   const handleGenerateTags = () => {
     if (description.length < 10) {
-      toast.error("Please add a more detailed description to generate tags.");
+      toast({
+        title: "Description too short",
+        description: "Please add a more detailed description to generate tags.",
+      });
       return;
     }
     
-    // Mock AI-generated tags based on the category and description
-    const aiTags = ["innovation"];
+    // Mock AI-generated tags
+    const aiTags = ["innovation", "tech", "productivity", "mobile"];
+    setTags([...new Set([...tags, ...aiTags])]);
     
-    // Add category-based tags
-    if (category === "Web App") {
-      aiTags.push("web", "saas");
-    } else if (category === "Mobile App") {
-      aiTags.push("mobile", "app");
-    } else if (category === "Open Source") {
-      aiTags.push("opensource", "community");
-    }
-    
-    // Add a few generic tags
-    const genericTags = ["productivity", "tech", "startup", "creative"];
-    const randomTags = genericTags.sort(() => 0.5 - Math.random()).slice(0, 2);
-    
-    const combinedTags = [...tags, ...aiTags, ...randomTags];
-    // Remove duplicates and limit to 10
-    const uniqueTags = [...new Set(combinedTags)].slice(0, 10);
-    
-    setTags(uniqueTags);
-    
-    toast.success("Tags have been generated based on your description.");
+    toast({
+      title: "Tags Generated",
+      description: "Tags have been generated based on your description.",
+    });
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) {
-      toast.error("You must be logged in to create a project");
-      navigate('/login');
-      return;
-    }
-    
     // Basic validation
     if (!title || !description || !category) {
-      toast.error("Please fill in all required fields.");
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
       return;
     }
     
     setIsSubmitting(true);
     
-    try {
-      // Convert price to number
-      const priceValue = parseFloat(price) || 0;
-      
-      // Insert project into Supabase
-      const { data, error } = await supabase
-        .from('projects')
-        .insert({
-          owner_id: user.id,
-          title,
-          description,
-          tags,
-          stage,
-          licensing,
-          price: priceValue,
-          visibility: isPrivate ? 'private' : 'public'
-        })
-        .select()
-        .single();
-      
-      if (error) {
-        throw error;
-      }
-      
-      // TODO: Handle file uploads to Supabase storage
-      
-      toast.success("Your idea has been successfully created!");
-      navigate(`/idea/${data.id}`);
-    } catch (error: any) {
-      console.error("Error creating project:", error);
-      toast.error(error.message || "An error occurred while creating your project");
-    } finally {
+    // Simulate API call
+    setTimeout(() => {
       setIsSubmitting(false);
-    }
+      toast({
+        title: "Idea Created",
+        description: "Your idea has been successfully created.",
+      });
+      navigate('/dashboard');
+    }, 1500);
   };
 
   return (
@@ -252,14 +213,14 @@ const CreateIdea = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="status">Stage</Label>
-                <Select value={stage} onValueChange={setStage}>
+                <Label htmlFor="status">Status</Label>
+                <Select value={status} onValueChange={setStatus}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a stage" />
+                    <SelectValue placeholder="Select a status" />
                   </SelectTrigger>
                   <SelectContent>
                     {statuses.map((stat) => (
-                      <SelectItem key={stat} value={stat}>{stageLabels[stat as keyof typeof stageLabels]}</SelectItem>
+                      <SelectItem key={stat} value={stat}>{stat}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -394,46 +355,6 @@ const CreateIdea = () => {
           </CardContent>
         </Card>
         
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Pricing & Licensing</CardTitle>
-            <CardDescription>
-              Set pricing and licensing terms for your project
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="licensing">Licensing</Label>
-              <Select value={licensing} onValueChange={setLicensing}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select licensing type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Open Source">Open Source</SelectItem>
-                  <SelectItem value="Commercial">Commercial</SelectItem>
-                  <SelectItem value="Proprietary">Proprietary</SelectItem>
-                  <SelectItem value="Private">Private (Custom Agreement)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="price">Price (USD)</Label>
-              <Input
-                id="price"
-                type="number"
-                min="0"
-                placeholder="0"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Set to 0 if you're not selling the project
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        
         <Card className="mb-8">
           <CardHeader>
             <CardTitle>Privacy & Collaboration</CardTitle>
@@ -502,7 +423,10 @@ const CreateIdea = () => {
               type="button"
               variant="outline"
               onClick={() => {
-                toast.success("Your idea has been saved as a draft.");
+                toast({
+                  title: "Draft Saved",
+                  description: "Your idea has been saved as a draft.",
+                });
               }}
             >
               Save Draft

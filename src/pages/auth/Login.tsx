@@ -15,16 +15,13 @@ import {
 import { Sparkles, Github, Mail } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { toast: uiToast } = useToast();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const { signIn, loading } = useAuth();
-  const [socialLoading, setSocialLoading] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,24 +33,11 @@ const Login = () => {
     }
   };
   
-  const handleOAuthLogin = async (provider: 'github' | 'google') => {
-    try {
-      setSocialLoading(provider);
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/dashboard`,
-        },
-      });
-      
-      if (error) {
-        throw error;
-      }
-    } catch (error: any) {
-      toast.error(error.message || `Failed to sign in with ${provider}`);
-    } finally {
-      setSocialLoading(null);
-    }
+  const handleOAuthLogin = (provider: string) => {
+    toast({
+      title: `${provider} Login`,
+      description: "This feature will be available soon.",
+    });
   };
 
   return (
@@ -133,20 +117,18 @@ const Login = () => {
                 <Button 
                   variant="outline" 
                   className="w-full" 
-                  onClick={() => handleOAuthLogin('github')}
-                  disabled={socialLoading !== null}
+                  onClick={() => handleOAuthLogin('GitHub')}
                 >
                   <Github className="mr-2 h-4 w-4" />
-                  {socialLoading === 'github' ? 'Loading...' : 'GitHub'}
+                  GitHub
                 </Button>
                 <Button 
                   variant="outline" 
                   className="w-full"
-                  onClick={() => handleOAuthLogin('google')} 
-                  disabled={socialLoading !== null}
+                  onClick={() => handleOAuthLogin('Google')} 
                 >
                   <Mail className="mr-2 h-4 w-4" />
-                  {socialLoading === 'google' ? 'Loading...' : 'Google'}
+                  Google
                 </Button>
               </div>
             </div>
